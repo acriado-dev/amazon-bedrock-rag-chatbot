@@ -25,14 +25,24 @@ def get_welcome_message() -> str:
 if (
     "chat_history" not in st.session_state
 ):  st.session_state.chat_history = []
-
+if "welcome_displayed" not in st.session_state:
+    st.session_state.welcome_displayed = False
 
 chat_container = st.container()
-input_text = st.chat_input("Chat with your bot here")  # display a chat input box
+input_text = st.chat_input("Chat with your bot here", key="chat_input")  # display a chat input box
 
-# welcome_message = get_welcome_message()
-# with st.chat_message('assistant'):
-#    st.markdown(welcome_message)
+
+def show_welcome_message():
+    global st
+    # Show welcome message only once
+    if not st.session_state.welcome_displayed:
+        welcome_message = get_welcome_message()
+        with st.chat_message('assistant'):
+            st.markdown(welcome_message)
+        st.session_state.welcome_displayed = True
+
+
+show_welcome_message()
 
 if input_text:
     # Get bot response
