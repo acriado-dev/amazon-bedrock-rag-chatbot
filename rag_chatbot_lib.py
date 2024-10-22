@@ -4,6 +4,7 @@ import botocore
 import chromadb
 import math
 import json
+import os
 from chromadb.utils.embedding_functions import amazon_bedrock_embedding_function
 
 
@@ -19,7 +20,9 @@ class ChatMessage:
 
 
 def get_collection(path, collection_name):
-    session = boto3.Session()
+    session = boto3.Session(aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+                            region_name=os.getenv("AWS_DEFAULT_REGION", "eu-central-1"))
     embedding_function = (
         amazon_bedrock_embedding_function.AmazonBedrockEmbeddingFunction(
             session=session, model_name="amazon.titan-embed-text-v2:0"
@@ -200,7 +203,9 @@ def process_tool(response_message, messages, bedrock, tool_list):
 # It can then optionally handle a tool use request if necessary.
 def chat_with_model(message_history, new_text=None):
     try:
-        session = boto3.Session()
+        session = boto3.Session(aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+                                region_name=os.getenv("AWS_DEFAULT_REGION", "eu-central-1"))
         bedrock = session.client(service_name="bedrock-runtime")
         print("[rag_lib] --> Starting chat_with_model")
         print("bedrock-->" + str(bedrock))
