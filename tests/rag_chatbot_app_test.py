@@ -36,7 +36,9 @@ def test_chat_history_preservation():
     at.run()
 
     # Check if second message is added
-    assert len(at.session_state["chat_history"]) == 4 # Chat history contains 2 message each (user/bot)
+    assert (
+        len(at.session_state["chat_history"]) == 4
+    )  # Chat history contains 2 message each (user/bot)
 
 
 def test_bot_response():
