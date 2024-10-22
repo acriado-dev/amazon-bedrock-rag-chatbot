@@ -9,8 +9,7 @@ from chromadb.utils.embedding_functions import amazon_bedrock_embedding_function
 
 MAX_MESSAGES = 20
 
-
-class ChatMessage():
+class ChatMessage:
     def __init__(self, role, text):
         self.role = role
         self.text = text
@@ -21,24 +20,28 @@ class ChatMessage():
 
 def get_collection(path, collection_name):
     session = boto3.Session()
-    embedding_function = amazon_bedrock_embedding_function.AmazonBedrockEmbeddingFunction(session=session, model_name="amazon.titan-embed-text-v2:0")
+    embedding_function = (
+        amazon_bedrock_embedding_function.AmazonBedrockEmbeddingFunction(
+            session=session, model_name="amazon.titan-embed-text-v2:0"
+        )
+    )
 
     client = chromadb.PersistentClient(path=path)
     print("Connected to chromadb")
     print("Listing collections:")
     print(client.list_collections())
-    collection = client.get_collection(collection_name, embedding_function=embedding_function)
+    collection = client.get_collection(
+        collection_name, embedding_function=embedding_function
+    )
 
     return collection
 
-def get_vector_search_results(collection, question):
 
-    results = collection.query(
-        query_texts=[question],
-        n_results=4
-    )
+def get_vector_search_results(collection, question):
+    results = collection.query(query_texts=[question], n_results=4)
 
     return results
+
 
 def get_tools():
     tools = [
@@ -52,14 +55,12 @@ def get_tools():
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "The retrieval-augmented generation query used to look up information in a repository of FAQs about Amazon Bedrock."
+                                "description": "The retrieval-augmented generation query used to look up information in a repository of FAQs about Amazon Bedrock.",
                             }
                         },
-                        "required": [
-                            "query"
-                        ]
+                        "required": ["query"],
                     }
-                }
+                },
             }
         },
         {
@@ -72,18 +73,17 @@ def get_tools():
                         "properties": {
                             "x": {
                                 "type": "number",
-                                "description": "The number to pass to the function."
+                                "description": "The number to pass to the function.",
                             }
                         },
-                        "required": ["x"]
+                        "required": ["x"],
                     }
-                }
+                },
             }
-        }
+        },
     ]
 
     return tools
-
 
 
 # allow to send a list of current and past messages to Amazon Bedrock for processing.
@@ -98,86 +98,76 @@ def convert_chat_messages_to_converse_api(chat_messages):
         else:
             print("---> it's a ChatMessage object, format it for the Bedrock API")
             print(chat_msg)
-            messages.append({
-                "role": chat_msg.role,
-                "content": [
-                    {"text": chat_msg.text}
-                ]
-            })
-        
+            messages.append(
+                {"role": chat_msg.role, "content": [{"text": chat_msg.text}]}
+            )
+
     return messages
 
 
-#function to handle any tool use requests.
-#lets us check the model's response to see if the get_amazon_bedrock_information tool was requested
-#if it was, we will retrieve rellevant content from the vector database 
-#and submit an additional request to Antropic Claude to generate a final response based on the retrieved content.
+# function to handle any tool use requests.
+# checks the model's response to see if the get_amazon_bedrock_information tool was requested
+# if it was, retrieves relevant content from the vector database
+# and submit an additional request to Anthropic Claude to generate a final response based on the retrieved content.
 def process_tool(response_message, messages, bedrock, tool_list):
     print("[rag_lib] --> Starting process_tool()")
     messages.append(response_message)
-    
-    response_content_blocks = response_message['content']
+
+    response_content_blocks = response_message["content"]
     follow_up_content_blocks = []
     is_rag_used = False
     tool_used = None
     for content_block in response_content_blocks:
-        if 'toolUse' in content_block:
-            tool_use_block = content_block['toolUse']
+        if "toolUse" in content_block:
+            tool_use_block = content_block["toolUse"]
 
-            tool_used = tool_use_block['name']
-            if(tool_use_block['name']) == 'get_amazon_bedrock_information':
-                print("Using tool: get_amazon_bedrock_information!!!!!!!!!!!!!!!!!!!!!!!")
+            tool_used = tool_use_block["name"]
+            if (tool_use_block["name"]) == "get_amazon_bedrock_information":
+                print(
+                    "Using tool: get_amazon_bedrock_information!"
+                )
                 is_rag_used = True
 
                 collection = get_collection("./data/chroma", "bedrock_faqs_collection")
 
-                query = tool_use_block['input']['query']
+                query = tool_use_block["input"]["query"]
 
                 print("---QUERY---")
                 print(query)
 
                 search_results = get_vector_search_results(collection, query)
-                flattened_results_list = list(itertools.chain(*search_results['documents'])) #flatten the list of lists returned by chromadb
+                flattened_results_list = list(
+                    itertools.chain(*search_results["documents"])
+                )  # flatten the list of lists returned by chromadb
 
                 rag_content = "\n\n".join(flattened_results_list)
 
                 print("---RAG CONTENT---")
                 print(rag_content)
 
-                follow_up_content_blocks.append({
-                    "toolResult": {
-                        "toolUseId": tool_use_block['toolUseId'],
-                        "content": [
-                            { "text": rag_content }
-                        ]
-
+                follow_up_content_blocks.append(
+                    {
+                        "toolResult": {
+                            "toolUseId": tool_use_block["toolUseId"],
+                            "content": [{"text": rag_content}],
+                        }
                     }
-                })
-            elif(tool_use_block['name']) == 'cosine':
-                print("using cosine!!!!")
+                )
+            elif (tool_use_block["name"]) == "cosine":
+                print("Using tool: cosine!")
                 is_rag_used = True
-                tool_result_value = math.cos(tool_use_block['input']['x'])
-                follow_up_content_blocks.append({
-                    "toolResult": {
-                        "toolUseId": tool_use_block['toolUseId'],
-                        "content": [
-                            {
-                                "json": {
-                                    "result": tool_result_value
-                                }
-                            }
-                        ]
+                tool_result_value = math.cos(tool_use_block["input"]["x"])
+                follow_up_content_blocks.append(
+                    {
+                        "toolResult": {
+                            "toolUseId": tool_use_block["toolUseId"],
+                            "content": [{"json": {"result": tool_result_value}}],
+                        }
                     }
-                })
-
-
+                )
 
     if len(follow_up_content_blocks) > 0:
-        
-        follow_up_message = {
-            "role": "user",
-            "content": follow_up_content_blocks
-        }
+        follow_up_message = {"role": "user", "content": follow_up_content_blocks}
 
         messages.append(follow_up_message)
 
@@ -188,25 +178,26 @@ def process_tool(response_message, messages, bedrock, tool_list):
                 "maxTokens": 2000,
                 "temperature": 0,
                 "topP": 0.9,
-                "stopSequences": []
+                "stopSequences": [],
             },
-            toolConfig={
-                "tools": tool_list
-            }
+            toolConfig={"tools": tool_list},
         )
         print("---- BEDROCK RESPONSE ----")
         print(json.dumps(response, indent=4))
-        response_output = response['output']['message']['content'][0]['text']
+        response_output = response["output"]["message"]["content"][0]["text"]
         if is_rag_used:
-            response_output = '[RAG] - Tool Config: '+ tool_used + "\n\n" + response_output
+            response_output = (
+                "[RAG] - Tool Config: " + tool_used + "\n\n" + response_output
+            )
 
-        return True, response_output #tool used, response
+        return True, response_output  # tool used, response
     else:
-        return False, None #tool not used,
-    
-#function to handle the request from the Streamlit front end application.
-#creates an Amazon Bedrock client with Boto3, then passes the input content to Amazon Bedrock.
-#It can then optionally handle a tool use request if necessary.
+        return False, None  # tool not used,
+
+
+# function to handle the request from the Streamlit front end application.
+# creates an Amazon Bedrock client with Boto3, then passes the input content to Amazon Bedrock.
+# It can then optionally handle a tool use request if necessary.
 def chat_with_model(message_history, new_text=None):
     try:
         session = boto3.Session()
@@ -215,13 +206,11 @@ def chat_with_model(message_history, new_text=None):
         print("bedrock-->" + str(bedrock))
         tool_list = get_tools()
 
-
         if new_text:
             print("[rag_lib] --> new text...")
             new_text_message = ChatMessage("user", text=new_text)
             print("[rag_lib] --> new_text_message " + new_text_message.__str__())
             message_history.append(new_text_message)
-
 
         number_of_messages = len(message_history)
         print("[rag_lib] --> number of messages: " + str(number_of_messages))
@@ -240,19 +229,17 @@ def chat_with_model(message_history, new_text=None):
                 "maxTokens": 2000,
                 "temperature": 0,
                 "topP": 0.9,
-                "stopSequences": []
+                "stopSequences": [],
             },
-            toolConfig={
-                "tools": tool_list
-            }
+            toolConfig={"tools": tool_list},
         )
 
-        response_message = response['output']['message']
+        response_message = response["output"]["message"]
         tool_used, output = process_tool(response_message, messages, bedrock, tool_list)
 
         if not tool_used:
             print("[rag_lib] --> NOT TOOL USED!")
-            output = response['output']['message']['content'][0]['text']
+            output = response["output"]["message"]["content"][0]["text"]
 
         print("[rag_lib] ---> FINAL RESPONSE ---")
         print("[rag_lib] output:" + output)
@@ -268,16 +255,3 @@ def chat_with_model(message_history, new_text=None):
     except Exception as e:
         print(f"[rag_lib] An unexpected error occurred: {str(e)}")
         return f"[rag_lib] An unexpected error occurred: {str(e)}"
-
-
-
-    
-
-
-
-
-
-
-
-
-
