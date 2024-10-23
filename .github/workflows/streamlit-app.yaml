@@ -2,7 +2,7 @@ name: Streamlit app
 
 on:
   push:
-    branches: ["feature/streamlit-action"]
+    branches: ["main"]
   pull_request:
     branches: ["main"]
 
