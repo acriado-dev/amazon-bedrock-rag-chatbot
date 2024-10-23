@@ -1,11 +1,14 @@
 import boto3
 import json
 import chromadb
+import os
 from chromadb.utils.embedding_functions import AmazonBedrockEmbeddingFunction
 
 
 def get_text_embeddings_collection(collection_name, path):
-    session = boto3.Session()
+    session = boto3.Session(aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+                            region_name=os.getenv("AWS_DEFAULT_REGION", "eu-central-1"))
     embedding_function = AmazonBedrockEmbeddingFunction(
         session=session, model_name="amazon.titan-embed-text-v2:0"
     )
@@ -43,12 +46,13 @@ def initialize_collection(collection_name, source_json_file, path):
     return collection
 
 
-chroma_db_path = "chroma"
+chroma_db_path = os.getenv("CHROMA_DB_PATH", "data/chroma")
+collections_path = os.getenv("COLLECTIONS_PATH", "data/collections")
 
 # Initialize collections
 initialize_collection(
-    "services_collection", "services_with_embeddings.json", path=chroma_db_path
+    "services_collection", f"{collections_path}/services_with_embeddings.json", path=chroma_db_path
 )
 initialize_collection(
-    "bedrock_faqs_collection", "bedrock_faqs_with_embeddings.json", path=chroma_db_path
+    "bedrock_faqs_collection", f"{collections_path}/bedrock_faqs_with_embeddings.json", path=chroma_db_path
 )
