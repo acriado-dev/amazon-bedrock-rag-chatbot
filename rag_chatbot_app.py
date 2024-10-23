@@ -22,14 +22,15 @@ def get_welcome_message() -> str:
 # UI chat history to the session cache.
 # allows us to re-render the chat history to the UI as the Streamlit app is re-run with each user interaction
 # Otherwise, the old messages will disappear from the user interface with each new chat message.
-if (
-    "chat_history" not in st.session_state
-):  st.session_state.chat_history = []
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 if "welcome_displayed" not in st.session_state:
     st.session_state.welcome_displayed = False
 
 chat_container = st.container()
-input_text = st.chat_input("Chat with your bot here", key="chat_input")  # display a chat input box
+input_text = st.chat_input(
+    "Chat with your bot here", key="chat_input"
+)  # display a chat input box
 
 
 def show_welcome_message():
@@ -37,7 +38,7 @@ def show_welcome_message():
     # Show welcome message only once
     if not st.session_state.welcome_displayed:
         welcome_message = get_welcome_message()
-        with st.chat_message('assistant'):
+        with st.chat_message("assistant"):
             st.markdown(welcome_message)
         st.session_state.welcome_displayed = True
 
@@ -74,7 +75,6 @@ for message in st.session_state.chat_history:
             role=message["role"], text=message["content"][0]["text"]
         )
 
-    with chat_container.chat_message(
-        message.role
-    ): st.write(message.text)
+    with chat_container.chat_message(message.role):
+        st.write(message.text)
     i += 1

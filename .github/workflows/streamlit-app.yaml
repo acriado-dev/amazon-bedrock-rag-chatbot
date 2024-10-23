@@ -1,0 +1,30 @@
+name: Streamlit app
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  streamlit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - uses: streamlit/streamlit-app-action@v0.0.3
+        with:
+          app-path: rag_chatbot_app.py
+          pytest-args: -v --junit-xml=test-results.xml
+          ruff: true
+      - if: always()
+        uses: pmeier/pytest-results-action@v0.6.0
+        with:
+          path: test-results.xml
+          summary: true
+          display-options: fEX
