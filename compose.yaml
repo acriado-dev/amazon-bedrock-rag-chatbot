@@ -1,0 +1,30 @@
+version: '2'
+
+
+services:
+  rag-chatbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: rag-chatbot
+    container_name: rag-chatbot
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - CHROMA_DB_PATH=${CHROMA_DB_PATH}
+      - COLLECTION_PATH=${COLLECTION_PATH}
+    restart: always
+    ports:
+      - "8502:8502"
+    volumes:
+      - .:/app
+    networks:
+      - rag-chatbot-network
+    entrypoint: >
+      sh -c "python populate_collection.py && streamlit run rag_chatbot_app.py --server.port=8502"
+
+
+networks:
+  rag-chatbot-network:
+    driver: bridge
