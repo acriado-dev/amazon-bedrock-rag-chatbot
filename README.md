@@ -38,10 +38,14 @@ Then, in the response chat form bot, if RAG has been used, will be shown, as wel
 [TODO: Pending to add some gifs of the application running]
 
 ## Architecture
-[TODO: Pending architecture Diagram]
+![bedrock-rag-diagram.png](resources/bedrock-rag-diagram.png)
 
-### Workflow
-[TODO]
+### Workflow:
+1. The user enters a new question in the Streamlit Chat App.
+2. The Chat history is retrieved from memory object and added prior the new message entered.
+3. The question is converted to a vector using Amazon Titan Embeddings, then matched to the closests vector in the database to retireve context.
+4. The combination of new Question received, Chat history, and Context from the Knowledge base are sent to the model.
+5. The model's response is displayed to the user in the StreamLit App.
 
 ## Getting Started
 ### Prerequisites
